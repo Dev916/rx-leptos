@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "Bridges between rxRust observables and Leptos 0.8 signals"
 license = "MIT"
-repository = "https://github.com/rxRust/rxRust"
+repository = "https://github.com/Dev916/rx-leptos"
 keywords = ["rx", "reactivex", "leptos", "signals", "frp"]
 categories = ["asynchronous", "web-programming"]
 publish = false
@@ -12,7 +12,7 @@ publish = false
 [dependencies]
 any_spawner = "0.3"
 reactive_graph = "0.2"
-rxrust = {path = "../..", default-features = false, features = ["scheduler"]}
+rxrust = {git = "https://github.com/Dev916/rxRust", branch = "master", default-features = false, features = ["scheduler"]}
 send_wrapper = "0.6"
 
 [dev-dependencies]
@@ -26,3 +26,9 @@ web-sys = {version = "0.3", features = ["AbortController", "AbortSignal", "Event
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"
+
+# The CSR example builds alongside the crate; the SSR example is its own
+# workspace because Leptos `csr` and `ssr` features must not unify.
+[workspace]
+members = ["examples/leptos-csr"]
+exclude = ["examples/leptos-ssr"]

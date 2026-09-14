@@ -1,7 +1,7 @@
 # rx-leptos CSR example
 
 A Leptos 0.8 client-side app that drives its UI with rxRust pipelines through
-[`rx-leptos`](../../crates/rx-leptos).
+[`rx-leptos`](../..).
 
 | Panel | Pipeline |
 |-------|----------|

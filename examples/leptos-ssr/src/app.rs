@@ -65,7 +65,7 @@ pub fn App() -> impl IntoView {
     <p class="muted">
       "The server renders the initial state; rx pipelines are wired in the browser inside "
       <code>"Effect::new"</code>". Source: "
-      <a href="https://github.com/Dev916/rxRust/tree/master/examples/leptos-ssr">"examples/leptos-ssr"</a>
+      <a href="https://github.com/Dev916/rx-leptos/tree/master/examples/leptos-ssr">"examples/leptos-ssr"</a>
     </p>
     <TypeaheadPanel/>
     <StopwatchPanel/>

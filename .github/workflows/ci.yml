@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  format:
+    name: Code Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly-2025-12-20
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+      - run: cargo fmt --all -- --check
+        working-directory: examples/leptos-ssr
+
+  test:
+    name: Tests and lints (stable)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      - run: cargo clippy --all-targets --target wasm32-unknown-unknown -- -D warnings
+      - run: cargo check -p leptos-csr-example --target wasm32-unknown-unknown
+      - name: SSR example (server)
+        working-directory: examples/leptos-ssr
+        run: |
+          cargo clippy --features ssr --all-targets -- -D warnings
+          cargo test --features ssr --test ssr
+          cargo test --test model
+      - name: SSR example (hydrate, wasm32)
+        working-directory: examples/leptos-ssr
+        run: cargo clippy --features hydrate --lib --target wasm32-unknown-unknown -- -D warnings
+
+  wasm:
+    name: WASM Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - run: wasm-pack test --node

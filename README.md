@@ -38,7 +38,7 @@ Leptos's server integrations have no tokio `LocalSet`, so `spawn_local`
 panics during server render; rxRust's `LocalScheduler` timers and
 `from_signal` change delivery both need it. Create signals at component level
 and wire pipelines inside `Effect::new` (browser only), feeding the signals
-with `feed_signal` / `.feed(write)`. [`examples/leptos-ssr`](../../examples/leptos-ssr)
+with `feed_signal` / `.feed(write)`. [`examples/leptos-ssr`](examples/leptos-ssr)
 shows the pattern with `cargo leptos`.
 
 ## Outside Leptos
@@ -54,9 +54,20 @@ any_spawner::Executor::poll_local(); // deliver pending changes
 
 ## Example
 
-[`examples/leptos-csr`](../../examples/leptos-csr) is a Leptos 0.8 client-side
+[`examples/leptos-csr`](examples/leptos-csr) is a Leptos 0.8 client-side
 app built on these bridges; run it with `trunk serve`.
 
 ## Status
 
-Spike. Not published; API may change.
+Pre-release, not yet on crates.io; the API may still change. Depends on the
+[Dev916/rxRust](https://github.com/Dev916/rxRust) fork (git dependency) until
+its operator work is published.
+
+## Development
+
+```sh
+cargo test --workspace                 # crate + CSR example models
+wasm-pack test --node                  # DOM/web sources in node
+cd examples/leptos-csr && trunk serve  # browser
+cd examples/leptos-ssr && cargo leptos serve
+```
