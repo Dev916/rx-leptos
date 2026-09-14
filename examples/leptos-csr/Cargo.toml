@@ -13,8 +13,14 @@ rx-leptos = {path = "../.."}
 rxrust = {git = "https://github.com/Dev916/rxRust", branch = "master"}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3"
 wasm-bindgen = "0.2"
-web-sys = {version = "0.3", features = ["Document", "EventTarget", "MouseEvent", "Window"]}
+wasm-bindgen-futures = "0.4"
+web-sys = {version = "0.3", features = ["Document", "EventTarget", "MouseEvent", "Response", "Window"]}
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+any_spawner = {version = "0.3", features = ["wasm-bindgen"]}
+wasm-bindgen-test = "0.3"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 any_spawner = {version = "0.3", features = ["tokio"]}
