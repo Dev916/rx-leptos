@@ -164,7 +164,9 @@ fn FetchPanel() -> impl IntoView {
       <h2>"Fetch: " <code>"from_fetch → switch_map"</code></h2>
       <button on:click=move |_| load.next(())>"Load data.json"</button>
       <p class="muted">{move || status.get()}</p>
-      <ul>{move || items.get().into_iter().map(|name| view! { <li>{name}</li> }).collect_view()}</ul>
+      <ul>
+        {move || items.get().into_iter().map(|name| view! { <li>{name}</li> }).collect_view()}
+      </ul>
     </section>
   }
 }
