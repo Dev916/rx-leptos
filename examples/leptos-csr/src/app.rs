@@ -37,6 +37,8 @@ pub fn App() -> impl IntoView {
     <TypeaheadPanel/>
     <StopwatchPanel/>
     <MousePanel/>
+    <FramesPanel/>
+    <FetchPanel/>
   }
 }
 
@@ -113,6 +115,77 @@ fn MousePanel() -> impl IntoView {
   view! {
     <section>
       <h2>"Mouse: " <code>"from_event → throttle_time"</code></h2>
+      <p class="muted">"Only available in the browser build."</p>
+    </section>
+  }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[component]
+fn FramesPanel() -> impl IntoView {
+  use crate::model::frame_stats;
+
+  let running = RwSignal::new(true);
+  let stats = frame_stats(running);
+
+  view! {
+    <section>
+      <h2>"Frames: " <code>"animation_frames → scan"</code></h2>
+      <p>{move || {
+        let s = stats.get();
+        format!("{} frames, {:.0} ms into this run, {:.0} fps", s.frames, s.elapsed_ms, s.fps)
+      }}</p>
+      <div style="height: 8px; background: #eee; border-radius: 4px;">
+        <div style=move || format!(
+          "height: 8px; width: {:.1}%; background: #58a; border-radius: 4px;",
+          (stats.get().elapsed_ms / 2000.0 % 1.0) * 100.0
+        )></div>
+      </div>
+      <p>
+        <button on:click=move |_| running.update(|on| *on = !*on)>
+          {move || if running.get() { "Pause" } else { "Resume" }}
+        </button>
+      </p>
+    </section>
+  }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[component]
+fn FetchPanel() -> impl IntoView {
+  use crate::model::json_loader;
+
+  let loader = json_loader("/data.json");
+  let mut load = loader.load.clone();
+  let (items, status) = (loader.items, loader.status);
+
+  view! {
+    <section>
+      <h2>"Fetch: " <code>"from_fetch → switch_map"</code></h2>
+      <button on:click=move |_| load.next(())>"Load data.json"</button>
+      <p class="muted">{move || status.get()}</p>
+      <ul>{move || items.get().into_iter().map(|name| view! { <li>{name}</li> }).collect_view()}</ul>
+    </section>
+  }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[component]
+fn FramesPanel() -> impl IntoView {
+  view! {
+    <section>
+      <h2>"Frames: " <code>"animation_frames → scan"</code></h2>
+      <p class="muted">"Only available in the browser build."</p>
+    </section>
+  }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[component]
+fn FetchPanel() -> impl IntoView {
+  view! {
+    <section>
+      <h2>"Fetch: " <code>"from_fetch → switch_map"</code></h2>
       <p class="muted">"Only available in the browser build."</p>
     </section>
   }

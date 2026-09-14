@@ -108,3 +108,96 @@ pub fn mouse_position(target: &web_sys::EventTarget, throttle: Duration) -> Read
     (0, 0),
   )
 }
+
+/// Running statistics of an `animation_frames` stream.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct FrameStats {
+  /// Frames seen since the model was created (pauses do not reset it).
+  pub frames: u64,
+  /// Milliseconds since the current run started.
+  pub elapsed_ms: f64,
+  /// Frames per second, from the gap to the previous frame.
+  pub fps: f64,
+}
+
+/// Count animation frames while `running`; pausing stops the frame requests
+/// entirely rather than ignoring them.
+#[cfg(target_arch = "wasm32")]
+pub fn frame_stats(running: RwSignal<bool>) -> ReadSignal<FrameStats> {
+  running
+    .to_observable()
+    .switch_map(|on| {
+      if on {
+        animation_frames().box_it()
+      } else {
+        Local::from_iter(Vec::<AnimationFrame>::new()).box_it()
+      }
+    })
+    .scan((FrameStats::default(), None::<f64>), |(stats, previous), frame: AnimationFrame| {
+      let fps = previous.map_or(0.0, |p| 1000.0 / (frame.timestamp - p).max(1.0));
+      (
+        FrameStats { frames: stats.frames + 1, elapsed_ms: frame.elapsed, fps },
+        Some(frame.timestamp),
+      )
+    })
+    .map(|(stats, _): (FrameStats, Option<f64>)| stats)
+    .to_signal(FrameStats::default())
+}
+
+/// A button-driven JSON loader.
+#[cfg(target_arch = "wasm32")]
+pub struct Loader {
+  /// Emit to (re)load; a load already in flight is aborted.
+  pub load: LocalSubject<'static, (), Infallible>,
+  /// The strings from the last successful response.
+  pub items: ReadSignal<Vec<String>>,
+  /// "idle", "loading", "ok" or an error description.
+  pub status: ReadSignal<String>,
+}
+
+/// Fetch `url` (a JSON array of strings) every time `load` emits; a new
+/// load cancels the previous request through `switch_map`.
+#[cfg(target_arch = "wasm32")]
+pub fn json_loader(url: &'static str) -> Loader {
+  use wasm_bindgen::JsValue;
+  use wasm_bindgen_futures::JsFuture;
+  use web_sys::Response;
+
+  let load = use_subject::<()>();
+  let (status, set_status) = signal("idle".to_string());
+
+  let items = load
+    .clone()
+    .tap(move |_| set_status.set("loading".into()))
+    .switch_map(move |_| {
+      from_fetch(url)
+        .map(Ok::<Response, JsValue>)
+        .catch_error(|err: JsValue| Local::of(Err(err)))
+        .switch_map(|result: Result<Response, JsValue>| match result.and_then(|r| r.json()) {
+          Ok(promise) => Local::from_future(JsFuture::from(promise)).box_it(),
+          Err(err) => Local::of(Err(err)).box_it(),
+        })
+    })
+    .map(|result: Result<JsValue, JsValue>| {
+      result
+        .map(|value| {
+          js_sys::Array::from(&value)
+            .iter()
+            .filter_map(|v| v.as_string())
+            .collect::<Vec<String>>()
+        })
+        .map_err(|err| {
+          err
+            .as_string()
+            .unwrap_or_else(|| format!("{err:?}"))
+        })
+    })
+    .tap(move |result: &Result<Vec<String>, String>| match result {
+      Ok(_) => set_status.set("ok".into()),
+      Err(err) => set_status.set(format!("error: {err}")),
+    })
+    .map(|result: Result<Vec<String>, String>| result.unwrap_or_default())
+    .to_signal(Vec::new());
+
+  Loader { load, items, status }
+}

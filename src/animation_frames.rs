@@ -39,13 +39,17 @@ fn global_fn(name: &str) -> Result<js_sys::Function, JsValue> {
   js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str(name))?.dyn_into::<js_sys::Function>()
 }
 
+/// `performance.now()`, the clock `requestAnimationFrame` timestamps use.
+/// Browsers require `performance` as `this`; anything else is an "Illegal
+/// invocation".
 fn now() -> f64 {
   js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str("performance"))
     .ok()
-    .and_then(|p| js_sys::Reflect::get(&p, &JsValue::from_str("now")).ok())
-    .and_then(|f| f.dyn_into::<js_sys::Function>().ok())
-    .and_then(|f| f.call0(&js_sys::global()).ok())
-    .and_then(|v| v.as_f64())
+    .and_then(|performance| {
+      let now = js_sys::Reflect::get(&performance, &JsValue::from_str("now")).ok()?;
+      let now = now.dyn_into::<js_sys::Function>().ok()?;
+      now.call0(&performance).ok()?.as_f64()
+    })
     .unwrap_or_else(js_sys::Date::now)
 }
 

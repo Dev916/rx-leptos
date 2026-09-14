@@ -41,6 +41,8 @@ async fn animation_frames_emit_until_unsubscribed() {
   sleep(60).await;
   let count = frames.borrow().len();
   assert!(count >= 3, "expected several frames, got {count}");
+  let first = frames.borrow()[0].elapsed;
+  assert!((0.0..1000.0).contains(&first), "elapsed is measured from subscribe, got {first}");
   assert!(
     frames
       .borrow()
