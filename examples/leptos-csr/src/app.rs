@@ -32,7 +32,7 @@ pub fn App() -> impl IntoView {
     <h1>"rx-leptos"</h1>
     <p class="muted">
       "rxRust pipelines driving Leptos signals. Source: "
-      <a href="https://github.com/nyvorin/rxRust/tree/master/examples/leptos-csr">"examples/leptos-csr"</a>
+      <a href="https://github.com/Dev916/rxRust/tree/master/examples/leptos-csr">"examples/leptos-csr"</a>
     </p>
     <TypeaheadPanel/>
     <StopwatchPanel/>
