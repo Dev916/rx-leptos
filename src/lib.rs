@@ -12,7 +12,10 @@
 //!   whose subscription lives exactly as long as the current reactive owner (a
 //!   component, an effect, a route).
 //! - [`from_event`] (wasm only) turns DOM events on an `EventTarget` into an
-//!   observable that removes its listener when unsubscribed.
+//!   observable that removes its listener when unsubscribed;
+//!   [`animation_frames`] emits once per `requestAnimationFrame`, and
+//!   [`from_fetch`] performs a `fetch` per subscription and aborts it when
+//!   unsubscribed (both wasm only).
 //! - [`use_subject`] creates a `Subject` that completes when the current
 //!   reactive owner is cleaned up; [`use_subscription`] ties any subscription
 //!   to the owner the same way.
@@ -54,11 +57,19 @@ pub mod hooks;
 pub mod to_signal;
 
 #[cfg(target_arch = "wasm32")]
+pub mod animation_frames;
+#[cfg(target_arch = "wasm32")]
 pub mod from_event;
+#[cfg(target_arch = "wasm32")]
+pub mod from_fetch;
 
+#[cfg(target_arch = "wasm32")]
+pub use animation_frames::{AnimationFrame, AnimationFrames, animation_frames};
 pub use ext::{ObservableExt, SignalExt};
 #[cfg(target_arch = "wasm32")]
 pub use from_event::{FromEvent, from_event};
+#[cfg(target_arch = "wasm32")]
+pub use from_fetch::{FromFetch, from_fetch, from_fetch_with};
 pub use from_signal::{FromSignal, SignalSubscription, from_signal};
 pub use hooks::{use_subject, use_subscription};
 /// The reactive core this crate is built on, re-exported so downstream code
@@ -76,7 +87,11 @@ pub mod prelude {
   pub use reactive_graph::traits::{Get, GetUntracked, Set, Update, With, WithUntracked};
 
   #[cfg(target_arch = "wasm32")]
+  pub use crate::animation_frames::{AnimationFrame, AnimationFrames, animation_frames};
+  #[cfg(target_arch = "wasm32")]
   pub use crate::from_event::{FromEvent, from_event};
+  #[cfg(target_arch = "wasm32")]
+  pub use crate::from_fetch::{FromFetch, from_fetch, from_fetch_with};
   pub use crate::{
     ext::{ObservableExt, SignalExt},
     from_signal::{FromSignal, from_signal},

@@ -9,6 +9,8 @@ signals, built on `reactive_graph` (the reactive core Leptos re-exports).
 | `to_signal(obs, initial)` / `to_signal_local` | observable → signal | The signal and the subscription belong to the current reactive owner and are disposed with it. |
 | `use_observable(obs)` | observable → `ReadSignal<Option<T>>` | `None` until the first item. |
 | `from_event(target, "click")` | DOM → observable | wasm only; removes the listener on unsubscribe. |
+| `animation_frames()` | `requestAnimationFrame` → observable | wasm only; `{ timestamp, elapsed }` per frame, cancelled on unsubscribe. |
+| `from_fetch(url)` / `from_fetch_with(url, init)` | `fetch` → observable | wasm only; one `Response` then completion, `JsValue` error, aborted on unsubscribe. |
 | `feed_signal(obs, write)` | observable → existing signal | Writes every item into a `WriteSignal` until the owner is cleaned up. The SSR-friendly form: create the signal at component level, call this inside `Effect::new`. |
 | `use_subject::<T>()` | owner-scoped `Subject` | Completes (and releases subscribers) when the owner is cleaned up. Feed it from event handlers. |
 | `use_subscription(sub)` | owner-scoped subscription | Unsubscribes when the owner is cleaned up; the rx counterpart of `Effect::new` for side effects. |
