@@ -20,6 +20,8 @@ async fn server_renders_initial_state_without_spawning_tasks() {
   assert!(html.contains("0.0 s"), "stopwatch initial state rendered");
   assert!(html.contains("x = 0, y = 0"), "mouse panel initial state rendered");
   assert!(html.contains("0 searches started, 0 delivered"), "no search ran on the server");
+  assert!(html.contains("0 frames"), "frames panel initial state rendered");
+  assert!(html.contains("idle"), "fetch panel initial state rendered");
 }
 
 /// Leptos's server features enable `sandboxed-arenas`: signal access outside

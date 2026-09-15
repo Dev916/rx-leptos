@@ -6,7 +6,7 @@ use std::time::Duration;
 use leptos::prelude::*;
 use rxrust::prelude::*;
 
-use crate::model::{Stream, stopwatch, typeahead};
+use crate::model::{Stream, frames, loader, stopwatch, typeahead};
 
 const STYLE: &str = "
 body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 42rem; line-height: 1.5; }
@@ -70,6 +70,8 @@ pub fn App() -> impl IntoView {
     <TypeaheadPanel/>
     <StopwatchPanel/>
     <MousePanel/>
+    <FramesPanel/>
+    <FetchPanel/>
   }
 }
 
@@ -144,6 +146,52 @@ fn MousePanel() -> impl IntoView {
     <section node_ref=section>
       <h2>"Mouse: " <code>"from_event → throttle_time"</code></h2>
       <p>{move || { let (x, y) = position.get(); format!("x = {x}, y = {y} (move the pointer over this box)") }}</p>
+    </section>
+  }
+}
+
+#[component]
+fn FramesPanel() -> impl IntoView {
+  let model = frames();
+  let running = model.running;
+  let stats = model.stats;
+
+  view! {
+    <section>
+      <h2>"Frames: " <code>"animation_frames → scan"</code></h2>
+      <p>{move || {
+        let s = stats.get();
+        format!("{} frames, {:.0} ms into this run, {:.0} fps", s.frames, s.elapsed_ms, s.fps)
+      }}</p>
+      <div style="height: 8px; background: #eee; border-radius: 4px;">
+        <div style=move || format!(
+          "height: 8px; width: {:.1}%; background: #58a; border-radius: 4px;",
+          (stats.get().elapsed_ms / 2000.0 % 1.0) * 100.0
+        )></div>
+      </div>
+      <p>
+        <button on:click=move |_| running.update(|on| *on = !*on)>
+          {move || if running.get() { "Pause" } else { "Resume" }}
+        </button>
+      </p>
+    </section>
+  }
+}
+
+#[component]
+fn FetchPanel() -> impl IntoView {
+  let model = loader("/data.json");
+  let load = model.load;
+  let (items, status) = (model.items, model.status);
+
+  view! {
+    <section>
+      <h2>"Fetch: " <code>"from_fetch → switch_map"</code></h2>
+      <button on:click=move |_| load.update(|n| *n += 1)>"Load data.json"</button>
+      <p class="muted">{move || status.get()}</p>
+      <ul>
+        {move || items.get().into_iter().map(|name| view! { <li>{name}</li> }).collect_view()}
+      </ul>
     </section>
   }
 }
