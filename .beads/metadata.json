@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "rx_leptos",
+  "project_id": "26e06368-655f-41c2-a7b1-26b88e1c44cc"
+}
