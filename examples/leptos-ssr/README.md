@@ -1,7 +1,10 @@
 # rx-leptos SSR example
 
 The [CSR example](../leptos-csr) rendered on the server with `leptos_axum` and
-hydrated in the browser, built with `cargo leptos`.
+hydrated in the browser, built with `cargo leptos`. All five panels are here:
+typeahead, stopwatch, mouse tracker, frames (`animation_frames`) and fetch
+(`from_fetch`); the last two show that the browser-only sources fit the same
+"signals now, pipeline in an effect" shape.
 
 ## The one rule
 

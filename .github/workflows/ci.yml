@@ -58,3 +58,5 @@ jobs:
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: wasm-pack test --node
       - run: wasm-pack test --node examples/leptos-csr
+      - run: wasm-pack test --node --no-default-features --features hydrate
+        working-directory: examples/leptos-ssr

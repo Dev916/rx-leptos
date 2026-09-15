@@ -21,7 +21,13 @@ tokio = {version = "1", features = ["rt-multi-thread", "macros", "time"], option
 wasm-bindgen = "0.2"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-web-sys = {version = "0.3", features = ["EventTarget", "HtmlElement", "MouseEvent"]}
+js-sys = "0.3"
+wasm-bindgen-futures = "0.4"
+web-sys = {version = "0.3", features = ["EventTarget", "HtmlElement", "MouseEvent", "Response"]}
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+any_spawner = {version = "0.3", features = ["wasm-bindgen"]}
+wasm-bindgen-test = "0.3"
 
 [features]
 hydrate = ["leptos/hydrate"]
