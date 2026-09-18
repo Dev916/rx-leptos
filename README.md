@@ -63,12 +63,35 @@ Pre-release, not yet on crates.io; the API may still change. Depends on the
 [Dev916/rxRust](https://github.com/Dev916/rxRust) fork (git dependency) until
 its operator work is published.
 
+## Live demos
+
+| App | URL | How it runs |
+|-----|-----|-------------|
+| CSR example | <https://dev916.github.io/rx-leptos/> | static `trunk` build on GitHub Pages, deployed from `master` by `pages.yml` |
+| SSR example | <https://rx-leptos-ssr.webmech.workers.dev> | the `Dockerfile` image on Cloudflare Containers behind a Worker (`deploy/cloudflare`), deployed by `cloudflare.yml` |
+
+The Playwright suite in `e2e/` gates every PR against a local build and runs
+again against each live deployment after it goes out. Locally,
+`BASE_URL=<url>/ npx playwright test` points it anywhere.
+
+### Deploying the SSR container yourself
+
+```sh
+docker buildx build --platform linux/amd64 -t rx-leptos-ssr -f Dockerfile .   # optional local check
+cd deploy/cloudflare && npm ci
+CLOUDFLARE_API_TOKEN=... npx wrangler deploy      # builds the image, pushes it, deploys the Worker
+```
+
+CI does the same from `master` once the `CLOUDFLARE_API_TOKEN` repository
+secret exists (the account id is pinned in `deploy/cloudflare/wrangler.jsonc`).
+
 ## Development
 
 ```sh
 cargo test --workspace                 # crate + CSR example models
 wasm-pack test --node                  # DOM/web sources in node
 cd examples/leptos-csr && trunk serve  # browser
+(cd examples/leptos-csr && trunk build --release) && (cd e2e && npm ci && npx playwright test)  # browser tests
 cd examples/leptos-csr && trunk build --release && (cd ../../e2e && npm ci && npx playwright test)
 cd examples/leptos-ssr && cargo leptos serve
 ```
