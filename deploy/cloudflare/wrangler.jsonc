@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rx-leptos-ssr",
+  "account_id": "45a599d8f11d83959aae32d5d3f37ef6",
+  "main": "src/index.js",
+  "compatibility_date": "2025-09-01",
+  "observability": { "enabled": true },
+  // The image is built from the repository root (the Dockerfile's directory)
+  // so the SSR example can see the crate it depends on.
+  "containers": [
+    {
+      "class_name": "LeptosSsr",
+      "image": "../../Dockerfile",
+      "max_instances": 2
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "LEPTOS_SSR", "class_name": "LeptosSsr" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["LeptosSsr"] }]
+}

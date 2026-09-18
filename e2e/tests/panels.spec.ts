@@ -9,6 +9,11 @@ const number = (text: string | null) => Number((text ?? '').match(/-?\d+(\.\d+)?
 test.beforeEach(async ({ page }) => {
   await page.goto('./');
   await expect(page.getByRole('heading', { level: 2, name: /Typeahead/ })).toBeVisible();
+  // The SSR app renders the markup before the wasm arrives: wait until the
+  // frame counter moves, which only happens once the app is hydrated.
+  await expect(section(page, 'Frames').locator('p').first()).not.toContainText('0 frames', {
+    timeout: 20_000,
+  });
 });
 
 test('typeahead debounces, filters and cancels a stale search', async ({ page }) => {

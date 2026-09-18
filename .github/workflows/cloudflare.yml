@@ -1,0 +1,91 @@
+name: Cloudflare
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "deploy/cloudflare/**"
+      - "examples/leptos-ssr/**"
+      - "src/**"
+      - "Cargo.toml"
+      - ".github/workflows/cloudflare.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare
+  cancel-in-progress: false
+
+jobs:
+  # Deploys only once CLOUDFLARE_API_TOKEN is configured on the repository.
+  gate:
+    name: Check credentials
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else echo "ready=false" >> "$GITHUB_OUTPUT"; echo "CLOUDFLARE_API_TOKEN is not set; skipping deploy"; fi
+
+  deploy:
+    name: Build container and deploy Worker
+    needs: gate
+    if: needs.gate.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: deploy/cloudflare/package-lock.json
+      - run: npm ci
+        working-directory: deploy/cloudflare
+      - name: wrangler deploy (builds and pushes the image)
+        id: deploy
+        working-directory: deploy/cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          npx wrangler deploy 2>&1 | tee deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+  live-e2e:
+    name: Browser tests (Cloudflare)
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - run: npm ci
+        working-directory: e2e
+      - run: npx playwright install --with-deps chromium
+        working-directory: e2e
+      - name: Wait for the container to answer
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "${{ needs.deploy.outputs.url }}/") || true
+            [ "$code" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "container did not answer in time"; exit 1
+      - run: npx playwright test
+        working-directory: e2e
+        env:
+          BASE_URL: ${{ needs.deploy.outputs.url }}/
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-cloudflare
+          path: e2e/playwright-report
