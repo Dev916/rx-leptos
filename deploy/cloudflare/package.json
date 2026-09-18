@@ -1,0 +1,15 @@
+{
+  "name": "rx-leptos-ssr-worker",
+  "private": true,
+  "description": "Cloudflare Worker fronting the rx-leptos SSR example container",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.30"
+  },
+  "devDependencies": {
+    "wrangler": "^4.42.0"
+  }
+}

@@ -1,0 +1,6 @@
+.git
+target
+**/target
+**/dist
+e2e/node_modules
+deploy/cloudflare/node_modules
