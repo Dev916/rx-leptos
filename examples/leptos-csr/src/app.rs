@@ -155,7 +155,7 @@ fn FramesPanel() -> impl IntoView {
 fn FetchPanel() -> impl IntoView {
   use crate::model::json_loader;
 
-  let loader = json_loader("/data.json");
+  let loader = json_loader("data.json"); // relative: works under a Pages sub-path too
   let mut load = loader.load.clone();
   let (items, status) = (loader.items, loader.status);
 
