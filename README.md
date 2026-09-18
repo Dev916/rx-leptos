@@ -69,5 +69,6 @@ its operator work is published.
 cargo test --workspace                 # crate + CSR example models
 wasm-pack test --node                  # DOM/web sources in node
 cd examples/leptos-csr && trunk serve  # browser
+cd examples/leptos-csr && trunk build --release && (cd ../../e2e && npm ci && npx playwright test)
 cd examples/leptos-ssr && cargo leptos serve
 ```
