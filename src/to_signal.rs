@@ -3,9 +3,10 @@
 use std::convert::Infallible;
 
 use reactive_graph::{
+  computed::Memo,
   owner::{LocalStorage, Owner},
   signal::{ReadSignal, WriteSignal, signal, signal_local},
-  traits::{IsDisposed, Set},
+  traits::{Get, IsDisposed, Set},
 };
 use rxrust::{
   observable::{CoreObservable, Observable},
@@ -154,6 +155,43 @@ where
   let (read, write) = signal_local(initial);
   feed_signal(observable, write);
   read
+}
+
+/// Turn an observable into a memo that starts at `initial` and only notifies
+/// its dependents when a new item differs from the current value.
+///
+/// A plain [`to_signal`] notifies on every item, equal or not. `to_memo` adds
+/// `PartialEq` change suppression at the reactive level, so views and
+/// derived signals downstream re-run only on real changes; it is
+/// `distinct_until_changed` applied on the Leptos side of the bridge.
+/// Ownership is as for [`to_signal`]: the memo, the signal behind it and the
+/// subscription all belong to the current reactive owner.
+///
+/// # Examples
+///
+/// ```
+/// use std::convert::Infallible;
+///
+/// use reactive_graph::{owner::Owner, traits::GetUntracked};
+/// use rx_leptos::to_memo;
+/// use rxrust::prelude::*;
+///
+/// let owner = Owner::new();
+/// let mut source = Local::subject::<i32, Infallible>();
+/// let count = owner.with(|| to_memo(source.clone(), 0));
+/// source.next(7);
+/// assert_eq!(count.get_untracked(), 7);
+/// owner.cleanup();
+/// assert_eq!(source.inner.subscriber_count(), 0);
+/// ```
+pub fn to_memo<O, T>(observable: O, initial: T) -> Memo<T>
+where
+  T: PartialEq + Clone + Send + Sync + 'static,
+  O: Observable<Err = Infallible>,
+  O::Inner: CoreObservable<O::With<SetSignalObserver<T>>, Unsub: 'static>,
+{
+  let latest = to_signal(observable, initial);
+  Memo::new(move |_| latest.get())
 }
 
 /// Turn an observable into a `ReadSignal<Option<T>>` that is `None` until

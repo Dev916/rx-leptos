@@ -5,6 +5,7 @@
 use std::{cell::RefCell, convert::Infallible, rc::Rc};
 
 use any_spawner::Executor;
+use leptos_server::LocalResource;
 use reactive_graph::{
   computed::Memo,
   owner::Owner,
@@ -16,6 +17,19 @@ use rxrust::prelude::*;
 
 /// Leptos initialises the executor when mounting; tests do it by hand.
 fn executor() { let _ = Executor::init_futures_executor(); }
+
+/// Poll the executor until `done` holds. `any_spawner`'s `tick()` resolves
+/// through its thread pool, so a tight `poll_local` loop can outrun it.
+fn poll_until(done: impl Fn() -> bool) {
+  for _ in 0..500 {
+    Executor::poll_local();
+    if done() {
+      return;
+    }
+    std::thread::sleep(std::time::Duration::from_millis(1));
+  }
+  panic!("condition not met after polling");
+}
 
 #[test]
 fn to_signal_updates_until_owner_cleanup() {
@@ -322,4 +336,84 @@ fn feed_signal_writes_into_an_existing_signal_until_cleanup() {
   input.set(5);
   Executor::poll_local();
   assert_eq!(doubled.get_untracked(), 8, "the signal outlives the owner but stops updating");
+}
+
+#[test]
+fn to_memo_only_notifies_on_changed_values() {
+  executor();
+  let owner = Owner::new();
+  let mut source = Local::subject::<i32, Infallible>();
+  let latest = owner.with(|| to_memo(source.clone(), 1));
+  let seen = Rc::new(RefCell::new(Vec::new()));
+  let sink = seen.clone();
+  let _sub = from_signal(latest).subscribe(move |v| sink.borrow_mut().push(v));
+  assert_eq!(*seen.borrow(), vec![1]);
+
+  source.next(1); // equal to the current value: the memo does not notify
+  Executor::poll_local();
+  assert_eq!(*seen.borrow(), vec![1]);
+
+  source.next(2);
+  Executor::poll_local();
+  assert_eq!(*seen.borrow(), vec![1, 2]);
+  assert_eq!(latest.get_untracked(), 2);
+
+  owner.cleanup();
+  assert_eq!(source.inner.subscriber_count(), 0, "cleanup must unsubscribe");
+}
+
+#[test]
+fn observable_ext_gives_to_memo_a_method_form() {
+  let owner = Owner::new();
+  let mut source = Local::subject::<&'static str, Infallible>();
+  let name = owner.with(|| source.clone().to_memo("nobody"));
+  source.next("ada");
+  assert_eq!(name.get_untracked(), "ada");
+  owner.cleanup();
+}
+
+#[test]
+fn from_resource_skips_pending_and_emits_each_resolution() {
+  executor();
+  let user = RwSignal::new(None::<&'static str>);
+  let seen = Rc::new(RefCell::new(Vec::new()));
+  let sink = seen.clone();
+  let sub = from_resource(user).subscribe(move |v| sink.borrow_mut().push(v));
+  assert!(seen.borrow().is_empty(), "pending on subscribe");
+
+  user.set(Some("ada"));
+  Executor::poll_local();
+  user.set(None); // a real resource never goes back to pending; the bridge stays quiet anyway
+  Executor::poll_local();
+  user.set(Some("grace"));
+  Executor::poll_local();
+  assert_eq!(*seen.borrow(), vec!["ada", "grace"]);
+
+  sub.unsubscribe();
+  user.set(Some("linus"));
+  Executor::poll_local();
+  assert_eq!(*seen.borrow(), vec!["ada", "grace"]);
+}
+
+#[test]
+fn from_resource_follows_a_local_resource() {
+  executor();
+  let id = RwSignal::new(1);
+  let user = LocalResource::new(move || {
+    let id = id.get();
+    async move { format!("user{id}") }
+  });
+  let seen = Rc::new(RefCell::new(Vec::new()));
+  let sink = seen.clone();
+  let _sub = user
+    .resolved()
+    .subscribe(move |v| sink.borrow_mut().push(v));
+  assert!(seen.borrow().is_empty(), "pending on subscribe");
+
+  poll_until(|| !seen.borrow().is_empty());
+  assert_eq!(*seen.borrow(), vec!["user1".to_string()]);
+
+  id.set(2); // the resource refetches; the previous value stays until it resolves
+  poll_until(|| seen.borrow().len() == 2);
+  assert_eq!(*seen.borrow(), vec!["user1".to_string(), "user2".to_string()]);
 }

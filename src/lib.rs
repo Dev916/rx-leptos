@@ -10,7 +10,11 @@
 //!   the reactive graph directly, so it does not need the `effects` feature.
 //! - [`to_signal`] and [`use_observable`] turn an observable into a read signal
 //!   whose subscription lives exactly as long as the current reactive owner (a
-//!   component, an effect, a route).
+//!   component, an effect, a route); [`to_memo`] does the same into a memo, so
+//!   equal consecutive items do not notify dependents.
+//! - [`from_resource`] turns a `Resource` or `LocalResource` (any `Get<Value =
+//!   Option<T>>`) into an observable of its resolved values, skipping the
+//!   pending `None`.
 //! - [`from_event`] (wasm only) turns DOM events on an `EventTarget` into an
 //!   observable that removes its listener when unsubscribed;
 //!   [`animation_frames`] emits once per `requestAnimationFrame`, and
@@ -19,7 +23,8 @@
 //! - [`use_subject`] creates a `Subject` that completes when the current
 //!   reactive owner is cleaned up; [`use_subscription`] ties any subscription
 //!   to the owner the same way.
-//! - [`SignalExt`] and [`ObservableExt`] give the bridges method forms:
+//! - [`SignalExt`], [`ResourceExt`] and [`ObservableExt`] give the bridges
+//!   method forms:
 //!   `query.to_observable().debounce(d).to_signal(String::new())`.
 //!
 //! Everything uses rxRust's `Local` context: signals are single-threaded UI
@@ -51,7 +56,11 @@
 //! that neither schedule nor time anything (a `Subject` fed from handlers,
 //! `to_signal` on a synchronous source) are safe on the server as well.
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![warn(missing_docs)]
+
 pub mod ext;
+pub mod from_resource;
 pub mod from_signal;
 pub mod hooks;
 pub mod to_signal;
@@ -65,11 +74,12 @@ pub mod from_fetch;
 
 #[cfg(target_arch = "wasm32")]
 pub use animation_frames::{AnimationFrame, AnimationFrames, animation_frames};
-pub use ext::{ObservableExt, SignalExt};
+pub use ext::{ObservableExt, ResourceExt, SignalExt};
 #[cfg(target_arch = "wasm32")]
 pub use from_event::{FromEvent, from_event};
 #[cfg(target_arch = "wasm32")]
 pub use from_fetch::{FromFetch, from_fetch, from_fetch_with};
+pub use from_resource::{FromResource, Resolved, from_resource};
 pub use from_signal::{FromSignal, SignalSubscription, from_signal};
 pub use hooks::{use_subject, use_subscription};
 /// The reactive core this crate is built on, re-exported so downstream code
@@ -77,7 +87,7 @@ pub use hooks::{use_subject, use_subscription};
 pub use reactive_graph;
 /// The observable library this crate bridges, re-exported for the same reason.
 pub use rxrust;
-pub use to_signal::{feed_signal, to_signal, to_signal_local, use_observable};
+pub use to_signal::{feed_signal, to_memo, to_signal, to_signal_local, use_observable};
 
 /// Convenient imports: the bridge functions, their method forms, the
 /// owner-scoped hooks, and the `reactive_graph` access traits (`Get`, `Set`,
@@ -93,9 +103,10 @@ pub mod prelude {
   #[cfg(target_arch = "wasm32")]
   pub use crate::from_fetch::{FromFetch, from_fetch, from_fetch_with};
   pub use crate::{
-    ext::{ObservableExt, SignalExt},
+    ext::{ObservableExt, ResourceExt, SignalExt},
+    from_resource::{FromResource, from_resource},
     from_signal::{FromSignal, from_signal},
     hooks::{use_subject, use_subscription},
-    to_signal::{to_signal, to_signal_local, use_observable},
+    to_signal::{to_memo, to_signal, to_signal_local, use_observable},
   };
 }

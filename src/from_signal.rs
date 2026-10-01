@@ -63,7 +63,7 @@ impl<S: Get> ObservableType for FromSignal<S> {
 /// Like other rxRust subscriptions, dropping the handle does not
 /// unsubscribe; call `unsubscribe` or use `unsubscribe_when_dropped`.
 pub struct SignalSubscription {
-  node: Weak<dyn Detach + Send + Sync>,
+  pub(crate) node: Weak<dyn Detach + Send + Sync>,
 }
 
 impl Subscription for SignalSubscription {
@@ -104,7 +104,7 @@ struct Bridge<S, O> {
   _keep_alive: Arc<Node<S, O>>,
 }
 
-struct Node<S, O> {
+pub(crate) struct Node<S, O> {
   weak: Weak<Node<S, O>>,
   graph: RwLock<Graph>,
   /// `None` while a run is in progress and once detached.
@@ -114,7 +114,7 @@ struct Node<S, O> {
   owner: Option<Owner>,
 }
 
-trait Detach {
+pub(crate) trait Detach {
   fn detach(&self);
   fn is_detached(&self) -> bool;
 }
@@ -124,7 +124,7 @@ where
   S: Get + 'static,
   O: Observer<S::Value, Infallible> + 'static,
 {
-  fn start(signal: S, observer: O) -> Weak<dyn Detach + Send + Sync> {
+  pub(crate) fn start(signal: S, observer: O) -> Weak<dyn Detach + Send + Sync> {
     let node = Arc::new_cyclic(|weak| Node {
       weak: weak.clone(),
       graph: RwLock::new(Graph { dirty: true, ..Graph::default() }),
