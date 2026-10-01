@@ -8,6 +8,8 @@ signals, built on `reactive_graph` (the reactive core Leptos re-exports).
 | `from_signal(signal)` | signal → observable | Emits the current value on subscribe, then every change on the next executor tick (writes within a tick coalesce). Works with signals, memos and anything else implementing `Get`. No `effects` feature needed. |
 | `to_signal(obs, initial)` / `to_signal_local` | observable → signal | The signal and the subscription belong to the current reactive owner and are disposed with it. |
 | `use_observable(obs)` | observable → `ReadSignal<Option<T>>` | `None` until the first item. |
+| `to_memo(obs, initial)` | observable → `Memo<T>` | Like `to_signal`, but equal consecutive items do not notify dependents (`PartialEq`). |
+| `from_resource(res)` | resource → observable | Emits each resolved value of a `Resource` / `LocalResource` (any `Get<Value = Option<T>>`), skipping the pending `None`. |
 | `from_event(target, "click")` | DOM → observable | wasm only; removes the listener on unsubscribe. |
 | `animation_frames()` | `requestAnimationFrame` → observable | wasm only; `{ timestamp, elapsed }` per frame, cancelled on unsubscribe. |
 | `from_fetch(url)` / `from_fetch_with(url, init)` | `fetch` → observable | wasm only; one `Response` then completion, `JsValue` error, aborted on unsubscribe. |
@@ -15,7 +17,8 @@ signals, built on `reactive_graph` (the reactive core Leptos re-exports).
 | `use_subject::<T>()` | owner-scoped `Subject` | Completes (and releases subscribers) when the owner is cleaned up. Feed it from event handlers. |
 | `use_subscription(sub)` | owner-scoped subscription | Unsubscribes when the owner is cleaned up; the rx counterpart of `Effect::new` for side effects. |
 
-Method forms come from `SignalExt` and `ObservableExt` in the prelude:
+Method forms come from `SignalExt` (`signal.to_observable()`), `ResourceExt`
+(`resource.resolved()`) and `ObservableExt` in the prelude:
 
 ```rust
 let results = query

@@ -9,6 +9,12 @@ keywords = ["rx", "reactivex", "leptos", "signals", "frp"]
 categories = ["asynchronous", "web-programming"]
 publish = false
 
+[package.metadata.docs.rs]
+all-features = true
+default-target = "x86_64-unknown-linux-gnu"
+targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+rustdoc-args = ["--cfg", "docsrs"]
+
 [dependencies]
 any_spawner = "0.3"
 reactive_graph = "0.2"
@@ -17,6 +23,7 @@ send_wrapper = "0.6"
 
 [dev-dependencies]
 any_spawner = {version = "0.3", features = ["futures-executor"]}
+leptos_server = {version = "0.8", default-features = false}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"

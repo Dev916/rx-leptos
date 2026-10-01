@@ -3,6 +3,7 @@
 use std::convert::Infallible;
 
 use reactive_graph::{
+  computed::Memo,
   owner::LocalStorage,
   signal::{ReadSignal, WriteSignal},
   traits::{Get, IsDisposed, Set},
@@ -13,9 +14,11 @@ use rxrust::{
 };
 
 use crate::{
+  from_resource::{FromResource, from_resource},
   from_signal::{FromSignal, from_signal},
   to_signal::{
-    SetSignalObserver, SetSomeObserver, feed_signal, to_signal, to_signal_local, use_observable,
+    SetSignalObserver, SetSomeObserver, feed_signal, to_memo, to_signal, to_signal_local,
+    use_observable,
   },
 };
 
@@ -26,6 +29,16 @@ pub trait SignalExt: Get + Sized + 'static {
 }
 
 impl<S: Get + 'static> SignalExt for S {}
+
+/// `resource.resolved()`, the method form of [`from_resource`]: the resolved
+/// values of a `Resource`, `LocalResource` or any `Get<Value = Option<T>>`.
+pub trait ResourceExt<T>: Get<Value = Option<T>> + Sized + 'static {
+  /// Mirror this resource's resolved values as a `Local` observable. See
+  /// [`FromResource`].
+  fn resolved(self) -> Local<FromResource<Self>> { from_resource(self) }
+}
+
+impl<S, T> ResourceExt<T> for S where S: Get<Value = Option<T>> + 'static {}
 
 /// `observable.to_signal(initial)` and friends, the method forms of
 /// [`to_signal`], [`to_signal_local`], [`feed_signal`] and [`use_observable`].
@@ -46,6 +59,15 @@ pub trait ObservableExt: Observable<Err = Infallible> + Sized {
     Self::Inner: CoreObservable<Self::With<SetSignalObserver<T, LocalStorage>>, Unsub: 'static>,
   {
     to_signal_local(self, initial)
+  }
+
+  /// See [`to_memo`]: equal consecutive items do not notify dependents.
+  fn to_memo<T>(self, initial: T) -> Memo<T>
+  where
+    T: PartialEq + Clone + Send + Sync + 'static,
+    Self::Inner: CoreObservable<Self::With<SetSignalObserver<T>>, Unsub: 'static>,
+  {
+    to_memo(self, initial)
   }
 
   /// See [`feed_signal`]: write every item into an existing signal for as
